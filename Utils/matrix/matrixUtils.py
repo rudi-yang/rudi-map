@@ -3,6 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+# desc 矩阵/networkx 相关的工具函数
+
+
 # task 对于整体连接的矩阵 n行m列
 def build_adjacent_matrix_from_weight_matrix(matrix_w, row=3, col=6):
     if matrix_w.shape != (row, col):
@@ -16,8 +19,8 @@ def build_adjacent_matrix_from_weight_matrix(matrix_w, row=3, col=6):
         diff_col = abs(col_i - col_j)
 
         if diff_row + diff_col == 1:
-            print(row_i,row_j)
-            print(col_i,col_j)
+            print(row_i, row_j)
+            print(col_i, col_j)
             return max(matrix_w[row_i, col_i], matrix_w[row_j, col_j])
         else:
             return 0
@@ -49,3 +52,20 @@ def plot_network(G):
     labes = nx.get_edge_attributes(G, 'weight')
     nx.draw_networkx_edge_labels(G, pos, edge_labels=labes, font_color='red')
     plt.show()
+
+
+# task 从图中获取邻接矩阵或者邻接属性矩阵
+def get_adj_matrix_from_networkx(G, row, col, attr=""):
+    m = np.zeros((row * col, row * col))
+    if attr == "":
+        for edge in G.edges():
+            (x0, y0) = edge[0]
+            (x1, y1) = edge[1]
+            m[x0 * col + y0, x1 * col + y1] = 1
+    else:
+        tmp = nx.get_edge_attributes(G, attr)
+        for k, v in tmp.items():
+            (x0, y0) = k[0]
+            (x1, y1) = k[1]
+            m[x0 * col + y0, x1 * col + y1] = v
+    return m
