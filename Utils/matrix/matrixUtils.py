@@ -46,12 +46,11 @@ def build_network_by_adjacent_matrix(adj_m):
 
 
 # task 根据邻接矩阵作图
-def plot_network(G):
-    pos = nx.spring_layout(G)
+def plot_network(G, pos, attr="weight"):
+    plt.figure(figsize=(20, 10))
     nx.draw(G, pos, with_labels=True)
-    labes = nx.get_edge_attributes(G, 'weight')
+    labes = nx.get_edge_attributes(G, attr)
     nx.draw_networkx_edge_labels(G, pos, edge_labels=labes, font_color='red')
-    plt.show()
 
 
 # task 从图中获取邻接矩阵或者邻接属性矩阵
@@ -69,3 +68,8 @@ def get_adj_matrix_from_networkx(G, row, col, attr=""):
             (x1, y1) = k[1]
             m[x0 * col + y0, x1 * col + y1] = v
     return m
+
+
+# convert csr_matrix to numpy
+def get_adj_matrix_from_nx(G):
+    return nx.to_numpy_array(G)

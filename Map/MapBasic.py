@@ -1,28 +1,28 @@
-from Config.nodeWeight import NodeType
 import networkx as nx
-from Utils.matrix.matrixUtils import build_adjacent_matrix_from_weight_matrix, build_network_by_adjacent_matrix, \
-    plot_network
 import numpy as np
 import matplotlib.pyplot as plt
 
-
 # desc Map的基类
+from Utils.matrix.matrixUtils import get_adj_matrix_from_nx, plot_network
+
+
 class RudiMapBasic(object):
-    def __init__(self, weight_matrix, row, col):
+    def __init__(self, row, col):
         self._row = row
         self._col = col
-        self._weight_m = weight_matrix
-        self._adjacent_m = build_adjacent_matrix_from_weight_matrix(weight_matrix, row, col)
-        self.network = build_network_by_adjacent_matrix(self._adjacent_m)
-        self.navi_m = np.zeros((row, col))
+        self.G = nx.grid_2d_graph(row, col)
+
+        self._pos = dict((n, n) for n in self.G.nodes())
+
+        self._m_adj = get_adj_matrix_from_nx(self.G)
 
     @property
-    def weight_m(self):
-        return self._weight_m
+    def pos(self):
+        return self._pos
 
     @property
-    def adjacent_m(self):
-        return self._adjacent_m
+    def adj(self):
+        return self._m_adj
 
     @property
     def row(self):
@@ -32,50 +32,42 @@ class RudiMapBasic(object):
     def col(self):
         return self._col
 
-    def add_start_point(self, x, y):
-        self.navi_m[x, y] = NodeType.start_point
-        self.network.node[x * self.col + y]["type"] = NodeType.start_point
+    def set_weight_random(self, matrix, region_m=None, ratio_m=None, attr="weight"):
+        row = self.row
+        col = self.col
 
-    def add_end_point(self, x, y):
-        self.navi_m[x, y] = NodeType.end_point
-        self.network.node[x * self.col + y]["type"] = NodeType.end_point
+        self._m_weight = np.triu(matrix) * [np.ones([row * col, row * col]) - np.eye(row * col, row * col)]
+        self._m_weight = np.reshape(self._m_weight, [row * col, row * col])
+        self._m_weight = self._m_weight + self._m_weight.T
+        self._m_weight = np.multiply(self._m_weight, self._m_adj)
 
-    def add_pass_point(self, x, y):
-        self.navi_m[x, y] = NodeType.pass_point
-        self.network.node[x * self.col + y]["type"] = NodeType.pass_point
+        if region_m is not None:
+            self._m_weight = np.multiply(self._m_weight, region_m)
 
-    def show_weight_m(self):
-        plt.imshow(self.weight_m)
-        plt.show()
+        if ratio_m is not None:
+            self._m_weight = np.multiply(self._m_weight, ratio_m)
 
-    def show_navi_m(self):
-        plt.imshow(self.navi_m)
-        plt.show()
+        m_weight = self._m_weight
+        for r in range(0, m_weight.shape[0]):
+            for c in range(r + 1, m_weight.shape[1]):
+                if self.G.has_edge(list(self.G.nodes)[r], list(self.G.nodes)[c]):
+                    self.G.edges[list(self.G.nodes)[r], list(self.G.nodes)[c]][attr] = m_weight[r, c]
 
-    def show_network(self):
-        plot_network(self.network)
-        plt.show()
+    def show_network(self, attr="weight"):
+        plot_network(self.G, self.pos, attr)
 
 
 if __name__ == '__main__':
-    row = 5
-    col = 6
+    row = 15
+    col = 15
 
-    m = np.ones((row, col))
-    m[0:3, 2] = 9
-    m[2:4, 5] = 9
+    rudi_map = RudiMapBasic(row, col)
 
-    rudi_map = RudiMapBasic(m, row, col)
-    rudi_map.add_start_point(0, 0)
-    rudi_map.add_end_point(4, 5)
-    print(rudi_map.weight_m)
-    print(rudi_map.adjacent_m)
-    rudi_map.show_weight_m()
-    rudi_map.show_navi_m()
+    m_random = np.reshape(np.random.randint(1, 10, pow(row * col, 2)), [row * col, row * col])
+    rudi_map.set_weight_random(m_random)
+
     rudi_map.show_network()
+    path = np.array(nx.dijkstra_path(rudi_map.G, (0, 2), (14, 13)))
+    plt.plot(path[:, 0], path[:, 1], lw=5, color="g")
 
-    G = rudi_map.network
-    print(nx.astar_path(G, 1, 15))
-    print(nx.astar_path(G, 1, 15, weight='aa'))
-    print(nx.bidirectional_dijkstra(G, 1, 15, weight='weight'))
-    print(rudi_map.weight_m)
+    plt.savefig("z.png")
